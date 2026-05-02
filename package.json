@@ -9,11 +9,23 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "description": "",
   "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "body-parser": "^2.2.2",
     "cors": "^2.8.6",
     "express": "^5.2.1",
+    "express-session": "^1.19.0",
     "firebase-admin": "^13.8.0",
-    "nodemailer": "^8.0.5"
-  }
+    "nodemailer": "^8.0.7",
+    "socket.io": "^4.8.3"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/servicenestofficial-hash/newsletter.git"
+  },
+  "bugs": {
+    "url": "https://github.com/servicenestofficial-hash/newsletter/issues"
+  },
+  "homepage": "https://github.com/servicenestofficial-hash/newsletter#readme",
+  "description": ""
 }

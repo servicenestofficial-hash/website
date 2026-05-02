@@ -1,0 +1,927 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ServiceNest Dashboard</title>
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+  
+  <!-- Phosphor Icons (Alternative to Lucide for Vanilla HTML) -->
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+<link rel="icon" type="image/png" href="icon.png">
+  <style>
+    /* Custom Animations */
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .animate-fade-in {
+      animation: fadeIn 0.4s ease-out forwards;
+    }
+    
+    /* Custom Scrollbar for premium feel */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #0f172a; 
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #334155; 
+      border-radius: 10px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #475569; 
+    }
+
+    /* Modal transition */
+    .modal-enter {
+      opacity: 0;
+      transform: scale(0.95);
+      transition: all 0.2s ease-out;
+    }
+    .modal-enter-active {
+      opacity: 1;
+      transform: scale(1);
+    }
+
+    /* SECTION CENTER */
+.email-section {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+}
+
+/* CARD STYLE */
+.email-card {
+    width: 100%;
+    max-width: 520px;
+    padding: 30px;
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.06);
+    backdrop-filter: blur(12px);
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+    border: 1px solid rgba(255,255,255,0.08);
+}
+
+/* TITLE */
+.email-card h2 {
+    text-align: center;
+    margin-bottom: 25px;
+    font-size: 22px;
+    color: #60a5fa;
+}
+
+/* INPUT + TEXTAREA */
+.email-card input,
+.email-card textarea {
+    width: 100%;
+    padding: 14px;
+    margin-bottom: 16px;
+    border-radius: 12px;
+    border: 1px solid rgba(255,255,255,0.1);
+    background: rgba(255,255,255,0.05);
+    color: #fff;
+    font-size: 14px;
+    outline: none;
+    transition: 0.3s;
+}
+
+/* COOL SHINING PLACEHOLDER */
+.email-card input::placeholder,
+.email-card textarea::placeholder {
+    color: rgba(255,255,255,0.5);
+    background: linear-gradient(90deg, #ffffff33, #60a5fa, #ffffff33);
+    background-size: 200%;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: shine 3s linear infinite;
+}
+
+/* placeholder animation */
+@keyframes shine {
+    0% { background-position: 0%; }
+    100% { background-position: 200%; }
+}
+
+/* FOCUS EFFECT */
+.email-card input:focus,
+.email-card textarea:focus {
+    border: 1px solid #3b82f6;
+    box-shadow: 0 0 10px rgba(59,130,246,0.4);
+}
+
+/* BUTTON */
+.email-card button {
+    width: 100%;
+    padding: 14px;
+    border: none;
+    border-radius: 12px;
+    font-size: 15px;
+    font-weight: bold;
+    color: white;
+    cursor: pointer;
+
+    background: linear-gradient(270deg, #3b82f6, #8b5cf6, #06b6d4);
+    background-size: 600% 600%;
+    animation: gradientMove 5s ease infinite;
+
+    box-shadow: 0 10px 30px rgba(59,130,246,0.3);
+    transition: 0.3s;
+}
+
+/* BUTTON HOVER GLOW */
+.email-card button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 0 25px rgba(59,130,246,0.6);
+}
+
+/* BUTTON GRADIENT ANIMATION */
+@keyframes gradientMove {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+
+.toast {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    min-width: 260px;
+    max-width: 340px;
+    padding: 14px 18px;
+    border-radius: 12px;
+    color: #fff;
+    font-size: 14px;
+    background: rgba(255,255,255,0.08);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255,255,255,0.1);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+
+    transform: translateX(120%);
+    opacity: 0;
+    transition: all 0.4s ease;
+    z-index: 9999;
+}
+
+/* show animation */
+.toast.show {
+    transform: translateX(0);
+    opacity: 1;
+}
+
+/* types */
+.toast.success {
+    border-left: 4px solid #22c55e;
+    box-shadow: 0 0 20px rgba(34,197,94,0.3);
+}
+
+.toast.error {
+    border-left: 4px solid #ef4444;
+    box-shadow: 0 0 20px rgba(239,68,68,0.3);
+}
+
+.toast.info {
+    border-left: 4px solid #3b82f6;
+    box-shadow: 0 0 20px rgba(59,130,246,0.3);
+}
+
+  </style>
+</head>
+<body class="flex h-screen w-full bg-slate-950 text-slate-100 font-sans overflow-hidden selection:bg-indigo-500/30">
+
+
+  <script>
+const firebaseConfig = {
+    apiKey: "AIzaSyC_MrqA2JVetfU-wSqEhy1ATShc_8pDFm0",
+    authDomain: "login-c18fa.firebaseapp.com",
+    projectId: "login-c18fa",
+    storageBucket: "login-c18fa.firebasestorage.app",
+    messagingSenderId: "982130273863",
+    appId: "1:982130273863:web:abe0bd9bb6798aa48c0b62",
+    measurementId: "G-YXGWWRQKLX"
+  };
+
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+
+// PROTECT PAGE
+auth.onAuthStateChanged(user => {
+  if (!user) {
+    window.location.href = "login.html";
+  }
+});
+</script>
+  <!-- Mobile Sidebar Overlay -->
+  <div id="mobile-overlay" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 hidden animate-fade-in" onclick="toggleSidebar()"></div>
+
+  <!-- Sidebar Navigation -->
+  <aside id="sidebar" class="fixed lg:static inset-y-0 left-0 z-50 w-72 bg-slate-900 border-r border-slate-800 flex flex-col transform -translate-x-full lg:translate-x-0 transition-transform duration-300 ease-in-out">
+    
+    <!-- Sidebar Header -->
+    <div class="h-16 flex items-center px-6 border-b border-slate-800 shrink-0">
+      <div class="flex items-center gap-3">
+          <img src="icon.png" style="height:40px;" class="no-click">
+        <span class="font-bold text-xl tracking-wide text-white">Service Nest</span>
+      </div>
+      <button onclick="toggleSidebar()" class="lg:hidden ml-auto text-slate-400 hover:text-white p-1 rounded-md hover:bg-slate-800 transition-colors">
+        <i class="ph ph-x text-xl"></i>
+      </button>
+    </div>
+
+    <!-- Sidebar Links -->
+    <nav class="flex-1 py-6 px-4 space-y-1.5 overflow-y-auto" id="nav-menu">
+      <div class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-4 px-3">Menu</div>
+      
+      <button onclick="switchTab('home', 'Home')" data-tab="home" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 group relative bg-indigo-500/10 text-indigo-400">
+        <div class="nav-indicator absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-indigo-500 rounded-r-full shadow-[0_0_8px_rgba(99,102,241,0.6)]"></div>
+        <i class="ph ph-house text-lg nav-icon text-indigo-400"></i>
+        Home
+      </button>
+      
+      <button onclick="switchTab('services', 'Manage Services')" data-tab="services" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 group relative text-slate-400 hover:bg-slate-800 hover:text-slate-200">
+        <div class="nav-indicator absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-indigo-500 rounded-r-full shadow-[0_0_8px_rgba(99,102,241,0.6)] hidden"></div>
+        <i class="ph ph-gear text-lg nav-icon text-slate-500 group-hover:text-slate-300"></i>
+        Manage Services
+      </button>
+    </nav>
+
+    <!-- Sidebar Footer Mini Info -->
+    <div class="p-4 border-t border-slate-800 m-4 bg-slate-950/50 rounded-xl border border-slate-800/50 shrink-0">
+      <p class="text-xs text-slate-400 text-center">Service Nest Pro</p>
+      <p class="text-[10px] text-slate-500 text-center mt-1">Version 1.0.0</p>
+    </div>
+  </aside>
+
+  <!-- Main Content Area -->
+  <div class="flex-1 flex flex-col min-w-0 h-screen overflow-hidden relative">
+    
+    <!-- Top Header -->
+    <header class="h-16 flex items-center justify-between px-4 lg:px-8 border-b border-slate-800 bg-slate-900/80 backdrop-blur-md z-30 shrink-0">
+      <div class="flex items-center gap-4">
+        <button onclick="toggleSidebar()" class="lg:hidden text-slate-400 hover:text-white p-2 rounded-md hover:bg-slate-800 transition-colors">
+          <i class="ph ph-list text-2xl"></i>
+        </button>
+        
+        <!-- Breadcrumb / Current Section -->
+        <div class="hidden sm:flex items-center text-sm font-medium text-slate-400">
+          <span class="text-slate-500">Dashboard</span>
+          <span class="mx-2 text-slate-600">/</span>
+          <span id="breadcrumb-title" class="text-slate-200 capitalize">Home</span>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-4 lg:gap-6">
+        <!-- Notification Bell mock -->
+    
+        
+        <div class="w-px h-6 bg-slate-800 hidden sm:block"></div>
+
+        <!-- User Profile -->
+        <div class="flex items-center gap-3 cursor-pointer group">
+          <div class="flex flex-col items-end hidden sm:block">
+            <span class="text-sm font-semibold text-slate-200 group-hover:text-white transition-colors">Huzaifa Saeed</span>
+            <span class="text-[10px] text-indigo-400">Administrator</span>
+          </div>
+          <div class="h-9 w-9 rounded-full bg-gradient-to-tr from-indigo-600 to-purple-600 flex items-center justify-center p-0.5 shadow-lg shadow-indigo-500/20 ring-2 ring-transparent group-hover:ring-indigo-500/50 transition-all">
+            <div class="w-full h-full bg-slate-900 rounded-full flex items-center justify-center overflow-hidden">
+              <i class="ph-fill ph-user text-slate-300"></i>
+            </div>
+            <button onclick="logout()">Logout</button>
+
+<script>
+function logout() {
+  firebase.auth().signOut().then(() => {
+    window.location.href = "login.html";
+  });
+}
+</script>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Dynamic Content Panels Container -->
+    <main class="flex-1 overflow-y-auto p-4 lg:p-8 relative">
+      <div class="max-w-7xl mx-auto pb-10">
+        
+        <!-- ================= HOME PANEL ================= -->
+        <div id="panel-home" class="panel animate-fade-in space-y-6">
+          <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div>
+              <h2 class="text-2xl font-bold text-white tracking-tight">Overview</h2>
+              <p class="text-slate-400 text-sm mt-1">Welcome back, Huzaifa. Here's what's happening with your services today.</p>
+            </div>
+            <button class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors shadow-lg shadow-indigo-500/20 flex items-center gap-2">
+              <i class="ph ph-trend-up"></i> Generate Report
+            </button>
+          </div>
+
+          <!-- KPIs -->
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6" id="kpi-container">
+            <!-- Rendered via JS -->
+          </div>
+          <section class="email-section">
+    <div class="email-card">
+        <h2>📧 Send Email to Subscribers</h2>
+
+        <input id="subject" type="text" placeholder="Enter Email Subject" />
+
+        <textarea id="message" placeholder="Write your message here..."></textarea>
+
+        <button onclick="sendEmail()">Send Email</button>
+    </div>
+</section>
+        </div>
+
+        <!-- ================= SERVICES PANEL ================= -->
+        <div id="panel-services" class="panel hidden space-y-6">
+          <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div>
+              <h2 class="text-2xl font-bold text-white tracking-tight">Manage Services</h2>
+              <p class="text-slate-400 text-sm mt-1">Create, update, and manage your active microservices and platforms.</p>
+            </div>
+            <button onclick="openServiceModal()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors shadow-lg shadow-indigo-500/20 flex items-center gap-2">
+              <i class="ph ph-plus-circle text-lg"></i> Deploy New Service
+            </button>
+          </div>
+
+          <!-- Services Grid (Cards instead of table to show images/descriptions) -->
+          <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6" id="services-container">
+            <!-- Rendered via JS -->
+          </div>
+        </div>
+
+        <!-- ================= SUBSCRIBERS PANEL ================= -->
+        <div id="panel-subscribers" class="panel hidden space-y-6">
+          <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div>
+              <h2 class="text-2xl font-bold text-white tracking-tight">Subscribers Management</h2>
+              <p class="text-slate-400 text-sm mt-1">View and manage your customer base and subscription tiers.</p>
+            </div>
+            <div class="flex gap-3 w-full md:w-auto">
+              <div class="relative w-full md:w-64">
+                <i class="ph ph-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-500"></i>
+                <input type="text" placeholder="Search subscribers..." class="w-full bg-slate-950 border border-slate-800 rounded-lg pl-10 pr-4 py-2 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all"/>
+              </div>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="subscribers-container">
+            <!-- Rendered via JS -->
+          </div>
+        </div>
+
+      </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="h-14 border-t border-slate-800 bg-slate-900 flex items-center justify-center px-6 shrink-0 z-20">
+      <p class="text-xs text-slate-500 font-medium">
+        Dashboard Created By <span class="text-indigo-400">M.Dawood.Baig</span>
+      </p>
+    </footer>
+  </div>
+
+  <!-- ================= ADD / EDIT SERVICE MODAL ================= -->
+  <div id="service-modal" class="fixed inset-0 z-[60] hidden">
+    <!-- Backdrop -->
+    <div class="absolute inset-0 bg-black/70 backdrop-blur-sm" onclick="closeServiceModal()"></div>
+    
+    <!-- Modal Box -->
+    <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-lg p-4">
+      <div class="bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl overflow-hidden modal-enter" id="service-modal-content">
+        
+        <div class="px-6 py-4 border-b border-slate-800 flex justify-between items-center bg-slate-800/50">
+          <h3 class="text-lg font-bold text-white" id="modal-title">Add New Service</h3>
+          <button onclick="closeServiceModal()" class="text-slate-400 hover:text-white transition-colors">
+            <i class="ph ph-x text-xl"></i>
+          </button>
+        </div>
+
+        <form id="service-form" onsubmit="saveService(event)" class="p-6 space-y-4">
+          <input type="hidden" id="service-id">
+          
+          <div>
+            <label class="block text-sm font-medium text-slate-300 mb-1">Service Name</label>
+            <input type="text" id="service-name" required class="w-full bg-slate-950 border border-slate-700 rounded-lg px-4 py-2 text-sm text-white focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none transition-all placeholder:text-slate-600" placeholder="e.g. Premium Cloud Hosting">
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-slate-300 mb-1">Image URL</label>
+            <input type="url" id="service-image" required class="w-full bg-slate-950 border border-slate-700 rounded-lg px-4 py-2 text-sm text-white focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none transition-all placeholder:text-slate-600" placeholder="https://example.com/image.jpg">
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-slate-300 mb-1">Description</label>
+            <textarea id="service-desc" required rows="3" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-4 py-2 text-sm text-white focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none transition-all resize-none placeholder:text-slate-600" placeholder="Describe the service functionality..."></textarea>
+          </div>
+
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-medium text-slate-300 mb-1">Status</label>
+              <select id="service-status" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-4 py-2 text-sm text-white focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none transition-all appearance-none">
+                <option value="Active">Active</option>
+                <option value="Maintenance">Maintenance</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-slate-300 mb-1">Uptime</label>
+              <input type="text" id="service-uptime" required class="w-full bg-slate-950 border border-slate-700 rounded-lg px-4 py-2 text-sm text-white focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none transition-all placeholder:text-slate-600" placeholder="e.g. 99.99%">
+            </div>
+          </div>
+
+          <div class="pt-4 flex gap-3 justify-end border-t border-slate-800 mt-6">
+            <button type="button" onclick="closeServiceModal()" class="px-4 py-2 rounded-lg text-sm font-medium text-slate-300 hover:text-white hover:bg-slate-800 transition-colors">
+              Cancel
+            </button>
+            <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2 rounded-lg text-sm font-medium transition-colors shadow-lg shadow-indigo-500/20">
+              Save Service
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+<!-- TOAST UI -->
+<div id="toast" class="toast"></div>
+
+<script>
+/* =========================
+   TOAST SYSTEM
+========================= */
+function showToast(message, type = "info") {
+    const toast = document.getElementById("toast");
+
+    toast.className = `toast ${type}`;
+    toast.innerText = message;
+
+    toast.classList.add("show");
+
+    setTimeout(() => {
+        toast.classList.remove("show");
+    }, 3000);
+}
+
+/* =========================
+   SEND EMAIL FUNCTION
+========================= */
+async function sendEmail() {
+    const subject = document.getElementById("subject").value;
+    const message = document.getElementById("message").value;
+
+    if (!subject || !message) {
+        showToast("Please fill both fields!", "info");
+        return;
+    }
+
+    showToast("Sending emails...", "info");
+
+    try {
+        const res = await fetch("http://localhost:3000/send-email", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ subject, message })
+        });
+
+        const data = await res.json();
+
+        if (data.success) {
+            showToast(`Emails sent to ${data.sent} subscribers ✅`, "success");
+        } else {
+            showToast("Failed to send emails ❌", "error");
+        }
+
+    } catch (error) {
+        console.error(error);
+        showToast("Server error ❌", "error");
+    }
+}
+</script>
+  
+
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+  <!-- Application Logic -->
+  <script>
+    
+
+    // Added Image and Description for CRUD operations
+    let servicesData = [];
+
+    const subscribersData = [
+      { id: 1, name: "Alice Freeman", email: "alice@example.com", tier: "Pro", status: "Active", joined: "Oct 24, 2025" },
+      { id: 2, name: "Bob Smith", email: "bob@example.com", tier: "Basic", status: "Inactive", joined: "Sep 12, 2025" },
+      { id: 3, name: "Charlie Davis", email: "charlie@example.com", tier: "Enterprise", status: "Active", joined: "Nov 01, 2025" },
+      { id: 4, name: "Diana Prince", email: "diana@example.com", tier: "Pro", status: "Active", joined: "Jan 15, 2026" },
+      { id: 5, name: "Evan Wright", email: "evan@example.com", tier: "Basic", status: "Active", joined: "Feb 28, 2026" },
+    ];
+
+    // --- Navigation & Sidebar Logic ---
+    function switchTab(tabId, tabName) {
+      // Hide all panels
+      document.querySelectorAll('.panel').forEach(p => p.classList.add('hidden'));
+      
+      // Show selected panel
+      const targetPanel = document.getElementById(`panel-${tabId}`);
+      if(targetPanel) {
+        targetPanel.classList.remove('hidden');
+        // Restart animation
+        targetPanel.classList.remove('animate-fade-in');
+        void targetPanel.offsetWidth; // trigger reflow
+        targetPanel.classList.add('animate-fade-in');
+      }
+
+      // Update Header Title
+      document.getElementById('breadcrumb-title').textContent = tabName;
+
+      // Update Nav Buttons State
+      document.querySelectorAll('.nav-btn').forEach(btn => {
+        const isTarget = btn.getAttribute('data-tab') === tabId;
+        const indicator = btn.querySelector('.nav-indicator');
+        const icon = btn.querySelector('.nav-icon');
+
+        if (isTarget) {
+          btn.className = "nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 group relative bg-indigo-500/10 text-indigo-400";
+          indicator.classList.remove('hidden');
+          icon.className = `ph ${icon.classList[1]} text-lg nav-icon text-indigo-400`;
+        } else {
+          btn.className = "nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 group relative text-slate-400 hover:bg-slate-800 hover:text-slate-200";
+          indicator.classList.add('hidden');
+          icon.className = `ph ${icon.classList[1]} text-lg nav-icon text-slate-500 group-hover:text-slate-300 transition-colors`;
+        }
+      });
+
+      // Close mobile sidebar if open
+      if (window.innerWidth < 1024) {
+        toggleSidebar(false);
+      }
+    }
+
+    function toggleSidebar(forceState) {
+      const sidebar = document.getElementById('sidebar');
+      const overlay = document.getElementById('mobile-overlay');
+      
+      const isCurrentlyOpen = !sidebar.classList.contains('-translate-x-full');
+      const shouldOpen = forceState !== undefined ? forceState : !isCurrentlyOpen;
+
+      if (shouldOpen) {
+        sidebar.classList.remove('-translate-x-full');
+        overlay.classList.remove('hidden');
+      } else {
+        sidebar.classList.add('-translate-x-full');
+        overlay.classList.add('hidden');
+      }
+    }
+
+    // --- Render Functions ---
+    
+   function renderKPIs(data) {
+  const container = document.getElementById('kpi-container');
+
+  const kpiData = [
+    {
+      title: "Today Visitors",
+      value: data.visitors,
+      change: "+ live users",
+      icon: "ph-users",
+      color: "text-emerald-400",
+      bg: "bg-emerald-400/10"
+    },
+    {
+      title: "Active Subscribers",
+      value: data.subscribers,
+      change: "+ real-time updates",
+      icon: "ph-user-plus",
+      color: "text-indigo-400",
+      bg: "bg-indigo-400/10"
+    },
+    {
+      title: "System Health",
+      value: data.health + "%",
+      change: "Optimal performance",
+      icon: "ph-activity",
+      color: "text-blue-400",
+      bg: "bg-blue-400/10"
+    },
+    {
+      title: "Active Services",
+      value: data.services,
+      change: "+ services live",
+      icon: "ph-lightning",
+      color: "text-amber-400",
+      bg: "bg-amber-400/10"
+    }
+  ];
+
+  container.innerHTML = kpiData.map(kpi => `
+    <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-sm hover:border-slate-700 transition-colors">
+      <div class="flex justify-between items-start">
+        <div>
+          <p class="text-sm font-medium text-slate-400">${kpi.title}</p>
+          <h3 class="text-2xl font-bold text-white mt-2">${kpi.value}</h3>
+        </div>
+        <div class="p-3 rounded-lg ${kpi.bg} ${kpi.color}">
+          <i class="${kpi.icon} text-xl"></i>
+        </div>
+      </div>
+      <p class="text-xs text-slate-500 mt-4">${kpi.change}</p>
+    </div>
+  `).join('');
+}
+    function renderSubscribers() {
+      const container = document.getElementById('subscribers-container');
+      container.innerHTML = subscribersData.map(sub => {
+        let badgeColor = sub.tier === 'Enterprise' ? 'bg-purple-500/10 text-purple-400 border-purple-500/20' : 
+                         sub.tier === 'Pro' ? 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20' : 
+                         'bg-slate-700/30 text-slate-300 border-slate-600/30';
+        let statusColor = sub.status === 'Active' ? 'text-emerald-400' : 'text-slate-500';
+        let dotColor = sub.status === 'Active' ? 'bg-emerald-400' : 'bg-slate-500';
+
+        return `
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 flex flex-col relative group overflow-hidden">
+          <div class="absolute top-0 right-0 p-4">
+             <span class="px-2.5 py-1 rounded-full text-xs font-medium border ${badgeColor}">
+                ${sub.tier}
+              </span>
+          </div>
+          <div class="flex items-center gap-4 mb-4">
+            <div class="h-12 w-12 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-300 font-bold text-lg">
+              ${sub.name.charAt(0)}
+            </div>
+            <div>
+              <h3 class="text-white font-medium">${sub.name}</h3>
+              <p class="text-sm text-slate-400">${sub.email}</p>
+            </div>
+          </div>
+          <div class="mt-auto pt-4 border-t border-slate-800/50 flex justify-between items-center text-sm">
+            <span class="text-slate-500">Joined ${sub.joined}</span>
+            <span class="flex items-center gap-1 ${statusColor}">
+              <div class="w-1.5 h-1.5 rounded-full ${dotColor}"></div>
+              ${sub.status}
+            </span>
+          </div>
+        </div>
+      `}).join('');
+    }
+
+    function renderServices() {
+  const container = document.getElementById('services-container');
+  
+  if (!servicesData || servicesData.length === 0) {
+    container.innerHTML = `
+      <div class="col-span-full py-12 text-center text-slate-500 border border-dashed border-slate-800 rounded-xl">
+        No services found. Deploy a new one!
+      </div>`;
+    return;
+  }
+
+  container.innerHTML = servicesData.map(service => {
+
+    const isAct = service.status === 'Active';
+    const statusClass = isAct
+      ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+      : 'bg-amber-500/10 text-amber-400 border-amber-500/20';
+
+    const iconClass = isAct ? 'ph-check-circle' : 'ph-warning-circle';
+
+    const users = service.users ? service.users.toLocaleString() : "0"; // 🔥 FIX
+
+    return `
+    <div class="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden flex flex-col hover:border-slate-700 transition-colors group">
+      
+      <div class="h-40 w-full relative overflow-hidden bg-slate-800">
+        <img src="${service.image || ''}" 
+             alt="${service.name}" 
+             class="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity duration-300"
+             onerror="this.src='https://images.unsplash.com/photo-1614064641936-382048bf3106?auto=format&fit=crop&q=80&w=600'">
+        
+        <div class="absolute inset-0 bg-gradient-to-t from-slate-900 to-transparent"></div>
+
+        <div class="absolute bottom-3 left-4 right-4 flex justify-between items-end">
+          <h3 class="font-bold text-white text-lg drop-shadow-md leading-tight">
+            ${service.name || 'No Name'}
+          </h3>
+
+          <span class="shrink-0 inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium border backdrop-blur-md ${statusClass}">
+            <i class="ph ${iconClass}"></i> ${service.status || 'Unknown'}
+          </span>
+        </div>
+      </div>
+
+      <div class="p-5 flex-1 flex flex-col">
+        <p class="text-sm text-slate-400 flex-1 mb-5 line-clamp-3">
+          ${service.description || 'No description available'}
+        </p>
+        
+        <div class="flex justify-between items-center text-sm text-slate-300 mb-4 bg-slate-950/50 p-3 rounded-lg border border-slate-800/50">
+          
+          <div class="flex flex-col">
+            <span class="text-xs text-slate-500">Users</span>
+            <span class="font-medium">${users}</span>
+          </div>
+
+          <div class="w-px h-8 bg-slate-800"></div>
+
+          <div class="flex flex-col text-right">
+            <span class="text-xs text-slate-500">Uptime</span>
+            <span class="font-medium text-emerald-400">${service.uptime || "0%"}</span>
+          </div>
+
+        </div>
+
+        <div class="flex gap-2 border-t border-slate-800/50 pt-4">
+          
+          <button onclick="openServiceModal('${service.id}')" 
+            class="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-200 py-2 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2">
+            <i class="ph ph-pencil-simple"></i> Edit
+          </button>
+
+          <button onclick="deleteService('${service.id}')" 
+            class="flex-1 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 py-2 rounded-lg text-sm font-medium transition-colors border border-rose-500/10 flex items-center justify-center gap-2">
+            <i class="ph ph-trash"></i> Delete
+          </button>
+
+        </div>
+      </div>
+    </div>
+    `;
+  }).join('');
+}
+
+    // --- CRUD Logic for Services ---
+    const modal = document.getElementById('service-modal');
+    const modalContent = document.getElementById('service-modal-content');
+    
+    function openServiceModal(serviceId = null) {
+      const form = document.getElementById('service-form');
+      form.reset();
+      
+      if (serviceId) {
+        // Edit Mode
+        document.getElementById('modal-title').innerText = "Edit Service";
+        const srv = servicesData.find(s => s.id === serviceId);
+        document.getElementById('service-id').value = srv.id;
+        document.getElementById('service-name').value = srv.name;
+        document.getElementById('service-image').value = srv.image;
+        document.getElementById('service-desc').value = srv.description;
+        document.getElementById('service-status').value = srv.status;
+        document.getElementById('service-uptime').value = srv.uptime;
+      } else {
+        // Add Mode
+        document.getElementById('modal-title').innerText = "Add New Service";
+        document.getElementById('service-id').value = "";
+        document.getElementById('service-status').value = "Active";
+        document.getElementById('service-uptime').value = "100%";
+      }
+
+      modal.classList.remove('hidden');
+      // Animation trigger
+      modalContent.classList.add('modal-enter-active');
+    }
+
+    function closeServiceModal() {
+      modalContent.classList.remove('modal-enter-active');
+      setTimeout(() => {
+        modal.classList.add('hidden');
+      }, 200);
+    }
+
+  async function saveService(event) {
+  event.preventDefault();
+
+  const id = document.getElementById('service-id').value;
+
+  const service = {
+    name: document.getElementById('service-name').value,
+    image: document.getElementById('service-image').value,
+    description: document.getElementById('service-desc').value,
+    status: document.getElementById('service-status').value,
+    uptime: document.getElementById('service-uptime').value
+  };
+
+  try {
+    if (id) {
+      // 🔥 EDIT
+      await fetch(`http://localhost:3000/api/services/${id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(service)
+      });
+    } else {
+      // 🔥 ADD
+      await fetch("http://localhost:3000/api/services", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(service)
+      });
+    }
+
+    loadServicesFromServer();
+    closeServiceModal();
+
+  } catch (error) {
+    console.error("Save service error:", error);
+  }
+}
+
+  loadServicesFromServer();
+  closeServiceModal();
+
+async function loadServicesFromServer() {
+  const res = await fetch("http://localhost:3000/api/services");
+  servicesData = await res.json();
+  renderServices();
+}
+    // --- Initialization ---
+    document.addEventListener('DOMContentLoaded', () => {
+      renderKPIs();
+      loadServicesFromServer();
+      renderSubscribers();
+      
+      // Handle resizing to reset sidebar state correctly
+      window.addEventListener('resize', () => {
+        if (window.innerWidth >= 1024) {
+          document.getElementById('mobile-overlay').classList.add('hidden');
+        }
+      });
+    });
+
+      socket.on("kpi-update", (data) => {
+    const kpiData = [
+      { title: "Today Visitors", value: data.visitors, change: "+20.1% from last month", icon: "ph-credit-card", color: "text-emerald-400", bg: "bg-emerald-400/10" },
+      { title: "Active Subscribers", value: data.subscribers, change: "+180.1% from last month", icon: "ph-users", color: "text-indigo-400", bg: "bg-indigo-400/10" },
+      { title: "System Health", value: data.health + "%", change: "Optimal performance", icon: "ph-activity", color: "text-blue-400", bg: "bg-blue-400/10" },
+      { title: "Active Services", value: data.services, change: "+3 new services deployed", icon: "ph-lightning", color: "text-amber-400", bg: "bg-amber-400/10" },
+    ];
+
+    renderKPI(kpiData);
+  });
+
+  function renderKPI(kpiData) {
+    const container = document.getElementById("kpi-container");
+    container.innerHTML = "";
+
+    kpiData.forEach(kpi => {
+      container.innerHTML += `
+        <div class="card">
+          <h3>${kpi.title}</h3>
+          <h1>${kpi.value}</h1>
+          <p>${kpi.change}</p>
+        </div>
+      `;
+    });
+  }
+
+const socket = io("http://localhost:3000");
+
+socket.on("servicesUpdated", (data) => {
+  servicesData = Object.keys(data || {}).map(id => ({
+    id,
+    ...data[id]
+  }));
+
+  renderServices();
+});
+
+app.use(cors({
+    origin: "http://127.0.0.1:5500"
+}));
+
+async function deleteService(id) {
+    try {
+        const res = await fetch(`http://localhost:3000/api/services/${id}`, {
+            method: "DELETE"
+        });
+
+        const data = await res.json();
+        console.log("Deleted:", data);
+
+        // reload services after delete
+        loadServicesFromServer();
+
+    } catch (error) {
+        console.error("Delete error:", error);
+    }
+}
+
+socket.on("kpi-update", (data) => {
+    document.getElementById("visitors").innerText = data.visitors;
+});
+
+  </script>
+
+
+</body>
+</html>
