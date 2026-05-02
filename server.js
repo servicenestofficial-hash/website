@@ -9,16 +9,17 @@ const app = express();
 const server = http.createServer(app);
 
 // ========================
-// 🔥 CORS SETUP (FIXED)
+// CORS
 // ========================
 app.use(cors({
     origin: "*",
     methods: ["GET", "POST", "PUT", "DELETE"],
 }));
+
 app.use(express.json());
 
 // ========================
-// 🔥 SOCKET.IO SETUP (FIXED)
+// SOCKET.IO
 // ========================
 const io = new Server(server, {
     cors: {
@@ -28,7 +29,7 @@ const io = new Server(server, {
 });
 
 // ========================
-// 🔥 FIREBASE INIT
+// FIREBASE (UNCHANGED)
 // ========================
 const serviceAccount = require("./firebase-key.json");
 
@@ -40,7 +41,7 @@ admin.initializeApp({
 const db = admin.database();
 
 // ========================
-// 🔥 EMAIL SETUP
+// EMAIL (UNCHANGED)
 // ========================
 const transporter = nodemailer.createTransport({
     service: "gmail",
@@ -51,11 +52,13 @@ const transporter = nodemailer.createTransport({
 });
 
 // ========================
-// 🔥 WATCH NEW SUBSCRIBERS
+// SUBSCRIBER WATCHER
 // ========================
 db.ref("subscribers").on("child_added", async (snapshot) => {
     const data = snapshot.val();
-    const email = data.email;
+    const email = data?.email;
+
+    if (!email) return;
 
     console.log("New subscriber:", email);
 
@@ -69,12 +72,12 @@ db.ref("subscribers").on("child_added", async (snapshot) => {
 
         console.log("Email sent:", email);
     } catch (err) {
-        console.error("Email error:", err);
+        console.error("Email error:", err.message);
     }
 });
 
 // ========================
-// 🔥 SERVICES API (FIREBASE ONLY)
+// SERVICES API
 // ========================
 
 // GET
@@ -102,55 +105,43 @@ app.post("/api/services", async (req, res) => {
     await newRef.set(service);
 
     const snapshot = await db.ref("services").once("value");
-    const services = snapshot.val();
-
-    io.emit("servicesUpdated", services);
+    io.emit("servicesUpdated", snapshot.val());
 
     res.json({ id: newRef.key, ...service });
 });
 
 // UPDATE
 app.put("/api/services/:id", async (req, res) => {
-    const id = req.params.id;
-
-    await db.ref("services/" + id).update(req.body);
+    await db.ref("services/" + req.params.id).update(req.body);
 
     const snapshot = await db.ref("services").once("value");
-    const services = snapshot.val();
-
-    io.emit("servicesUpdated", services);
+    io.emit("servicesUpdated", snapshot.val());
 
     res.json({ success: true });
 });
 
 // DELETE
 app.delete("/api/services/:id", async (req, res) => {
-    const id = req.params.id;
-
-    await db.ref("services/" + id).remove();
+    await db.ref("services/" + req.params.id).remove();
 
     const snapshot = await db.ref("services").once("value");
-    const services = snapshot.val();
-
-    io.emit("servicesUpdated", services);
+    io.emit("servicesUpdated", snapshot.val());
 
     res.json({ success: true });
 });
 
-
-
 // ========================
-// 🔥 SOCKET CONNECTION
+// SOCKET
 // ========================
 io.on("connection", (socket) => {
     console.log("User connected:", socket.id);
 });
 
-
-
 // ========================
-// 🔥 START SERVER (FIXED)
+// START SERVER (RAILWAY FIX ONLY)
 // ========================
-server.listen(3000, () => {
-    console.log("Server running on port 3000");
+const PORT = process.env.PORT || 3000;
+
+server.listen(PORT, () => {
+    console.log("Server running on port " + PORT);
 });
