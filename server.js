@@ -9,7 +9,7 @@ const app = express();
 const server = http.createServer(app);
 
 // ========================
-// CORS
+// BASIC MIDDLEWARE
 // ========================
 app.use(cors({
     origin: "*",
@@ -52,29 +52,33 @@ const transporter = nodemailer.createTransport({
 });
 
 // ========================
-// SUBSCRIBER WATCHER
+// SAFETY: prevent duplicate listeners on Railway restarts
 // ========================
-db.ref("subscribers").on("child_added", async (snapshot) => {
-    const data = snapshot.val();
-    const email = data?.email;
+if (!global.subscriberListenerAdded) {
+    db.ref("subscribers").on("child_added", async (snapshot) => {
+        const data = snapshot.val();
+        const email = data?.email;
 
-    if (!email) return;
+        if (!email) return;
 
-    console.log("New subscriber:", email);
+        console.log("New subscriber:", email);
 
-    try {
-        await transporter.sendMail({
-            from: "Service Nest <servicenestofficial@gmail.com>",
-            to: email,
-            subject: "Welcome to Service Nest 🎉",
-            html: "<h2>Welcome to Service Nest 🚀</h2>"
-        });
+        try {
+            await transporter.sendMail({
+                from: "Service Nest <servicenestofficial@gmail.com>",
+                to: email,
+                subject: "Welcome to Service Nest 🎉",
+                html: "<h2>Welcome to Service Nest 🚀</h2>"
+            });
 
-        console.log("Email sent:", email);
-    } catch (err) {
-        console.error("Email error:", err.message);
-    }
-});
+            console.log("Email sent:", email);
+        } catch (err) {
+            console.error("Email error:", err.message);
+        }
+    });
+
+    global.subscriberListenerAdded = true;
+}
 
 // ========================
 // SERVICES API
@@ -131,17 +135,21 @@ app.delete("/api/services/:id", async (req, res) => {
 });
 
 // ========================
-// SOCKET
+// SOCKET CONNECTION
 // ========================
 io.on("connection", (socket) => {
     console.log("User connected:", socket.id);
+
+    socket.on("disconnect", () => {
+        console.log("User disconnected:", socket.id);
+    });
 });
 
 // ========================
-// START SERVER (RAILWAY FIX ONLY)
+// RAILWAY START FIX
 // ========================
 const PORT = process.env.PORT || 3000;
 
 server.listen(PORT, () => {
-    console.log("Server running on port " + PORT);
+    console.log("🚀 Server running on port " + PORT);
 });
