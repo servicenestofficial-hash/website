@@ -17,7 +17,13 @@ app.use(cors({
 }));
 
 app.use(express.json());
+app.get("/", (req, res) => {
+    res.send("Server is running 🚀");
+});
 
+app.get("/api/test", (req, res) => {
+    res.json({ status: "API working" });
+});
 // ========================
 // SOCKET.IO
 // ========================
