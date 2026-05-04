@@ -146,6 +146,31 @@ io.on("connection", (socket) => {
 });
 
 // ========================
+// SEND EMAIL API
+// ========================
+app.post("/api/send-email", async (req, res) => {
+    const { to, subject, message } = req.body;
+
+    if (!to || !subject || !message) {
+        return res.status(400).json({ error: "Missing fields" });
+    }
+
+    try {
+        await transporter.sendMail({
+            from: "Service Nest <servicenestofficial@gmail.com>",
+            to,
+            subject,
+            html: `<p>${message}</p>`
+        });
+
+        res.json({ success: true });
+    } catch (err) {
+        console.error("Email error:", err);
+        res.status(500).json({ error: "Email failed" });
+    }
+});
+
+// ========================
 // RAILWAY START FIX
 // ========================
 const PORT = process.env.PORT || 3000;
