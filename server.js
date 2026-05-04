@@ -85,7 +85,7 @@ if (!global.subscriberListenerAdded) {
 // ========================
 
 // GET
-app.get(" /api/services", async (req, res) => {
+app.get("/api/services", async (req, res) => {
     const snapshot = await db.ref("services").once("value");
     const data = snapshot.val() || {};
 
@@ -98,7 +98,7 @@ app.get(" /api/services", async (req, res) => {
 });
 
 // CREATE
-app.post(" /api/services", async (req, res) => {
+app.post("/services", async (req, res) => {
     const newRef = db.ref("services").push();
 
     const service = {
@@ -115,7 +115,7 @@ app.post(" /api/services", async (req, res) => {
 });
 
 // UPDATE
-app.put(" /api/services/:id", async (req, res) => {
+app.put("/api/services/:id", async (req, res) => {
     await db.ref("services/" + req.params.id).update(req.body);
 
     const snapshot = await db.ref("services").once("value");
@@ -125,7 +125,7 @@ app.put(" /api/services/:id", async (req, res) => {
 });
 
 // DELETE
-app.delete(" /api/services/:id", async (req, res) => {
+app.delete("/api/services/:id", async (req, res) => {
     await db.ref("services/" + req.params.id).remove();
 
     const snapshot = await db.ref("services").once("value");
@@ -148,7 +148,7 @@ io.on("connection", (socket) => {
 // ========================
 // SEND EMAIL API
 // ========================
-app.post(" /api/send-email", async (req, res) => {
+app.post("/api/send-email", async (req, res) => {
     const { to, subject, message } = req.body;
 
     if (!to || !subject || !message) {
