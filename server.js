@@ -9,33 +9,27 @@ const app = express();
 const server = http.createServer(app);
 
 // ========================
-// BASIC MIDDLEWARE
+// MIDDLEWARE
 // ========================
 app.use(cors({
     origin: "*",
-    methods: ["GET", "POST", "PUT", "DELETE"],
+    methods: ["GET", "POST", "PUT", "DELETE"]
 }));
 
 app.use(express.json());
-app.get("/", (req, res) => {
-    res.send("Server is running 🚀");
-});
 
-app.get("/api/test", (req, res) => {
-    res.json({ status: "API working" });
-});
 // ========================
 // SOCKET.IO
 // ========================
 const io = new Server(server, {
     cors: {
         origin: "*",
-        methods: ["GET", "POST"]
+        methods: ["GET", "POST", "PUT", "DELETE"]
     }
 });
 
 // ========================
-// FIREBASE (UNCHANGED)
+// FIREBASE
 // ========================
 const serviceAccount = require("./firebase-key.json");
 
@@ -47,140 +41,296 @@ admin.initializeApp({
 const db = admin.database();
 
 // ========================
-// EMAIL (UNCHANGED)
+// EMAIL TRANSPORTER
 // ========================
+// IMPORTANT:
+// Add these variables in Railway:
+//
+// EMAIL_USER=yourgmail@gmail.com
+// EMAIL_PASS=your_app_password
+//
+// NEVER hardcode passwords
+// ========================
+
 const transporter = nodemailer.createTransport({
     service: "gmail",
     auth: {
-        user: "servicenestofficial@gmail.com",
-        pass: "vxhp hkjy ktau cpon"
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS
     }
 });
 
 // ========================
-// SUBSCRIBER WATCHER
+// TEST ROUTE
+// ========================
+app.get("/", (req, res) => {
+    res.send("🚀 Service Nest Backend Running");
+});
+
+// ========================
+// AUTO WELCOME EMAIL
 // ========================
 if (!global.subscriberListenerAdded) {
+
     db.ref("subscribers").on("child_added", async (snapshot) => {
+
         const data = snapshot.val();
         const email = data?.email;
 
         if (!email) return;
 
-        console.log("New subscriber:", email);
+        console.log("📩 New subscriber:", email);
 
         try {
+
             await transporter.sendMail({
-                from: "Service Nest <servicenestofficial@gmail.com>",
+                from: `Service Nest <${process.env.EMAIL_USER}>`,
                 to: email,
                 subject: "Welcome to Service Nest 🎉",
-                html: "<h2>Welcome to Service Nest 🚀</h2>"
+                html: `
+                    <div style="font-family:Arial;padding:20px;">
+                        <h2>🚀 Welcome to Service Nest</h2>
+                        <p>Thank you for subscribing.</p>
+                        <p>We are excited to have you with us!</p>
+                    </div>
+                `
             });
 
-            console.log("Email sent:", email);
+            console.log("✅ Welcome email sent:", email);
+
         } catch (err) {
-            console.error("Email error:", err.message);
+
+            console.error("❌ Welcome email error:", err.message);
+
         }
+
     });
 
     global.subscriberListenerAdded = true;
 }
 
 // ========================
+// SEND EMAIL API
+// ========================
+app.post("/api/send-email", async (req, res) => {
+
+    try {
+
+        const { subject, message } = req.body;
+
+        if (!subject || !message) {
+
+            return res.status(400).json({
+                success: false,
+                error: "Subject and message required"
+            });
+
+        }
+
+        // GET SUBSCRIBERS
+        const snapshot = await db.ref("subscribers").once("value");
+
+        const subscribers = snapshot.val() || {};
+
+        const emails = Object.values(subscribers)
+            .map(sub => sub.email)
+            .filter(Boolean);
+
+        if (emails.length === 0) {
+
+            return res.json({
+                success: false,
+                error: "No subscribers found"
+            });
+
+        }
+
+        // SEND EMAILS
+        for (const email of emails) {
+
+            await transporter.sendMail({
+                from: `Service Nest <${process.env.EMAIL_USER}>`,
+                to: email,
+                subject,
+                html: `
+                    <div style="font-family:Arial;padding:20px;">
+                        <h2>${subject}</h2>
+                        <p>${message}</p>
+                    </div>
+                `
+            });
+
+            console.log("✅ Email sent to:", email);
+        }
+
+        res.json({
+            success: true,
+            sent: emails.length
+        });
+
+    } catch (err) {
+
+        console.error("❌ Send email error:", err);
+
+        res.status(500).json({
+            success: false,
+            error: err.message
+        });
+
+    }
+
+});
+
+// ========================
 // SERVICES API
 // ========================
 
-// GET
+// GET ALL SERVICES
 app.get("/api/services", async (req, res) => {
-    const snapshot = await db.ref("services").once("value");
-    const data = snapshot.val() || {};
 
-    const services = Object.keys(data).map(key => ({
-        id: key,
-        ...data[key]
-    }));
+    try {
 
-    res.json(services);
+        const snapshot = await db.ref("services").once("value");
+
+        const data = snapshot.val() || {};
+
+        const services = Object.keys(data).map(key => ({
+            id: key,
+            ...data[key]
+        }));
+
+        res.json(services);
+
+    } catch (err) {
+
+        console.error(err);
+
+        res.status(500).json({
+            error: "Failed to fetch services"
+        });
+
+    }
+
 });
 
-// CREATE
+// CREATE SERVICE
 app.post("/api/services", async (req, res) => {
-    const newRef = db.ref("services").push();
 
-    const service = {
-        ...req.body,
-        users: 0
-    };
+    try {
 
-    await newRef.set(service);
+        const newRef = db.ref("services").push();
 
-    const snapshot = await db.ref("services").once("value");
-    io.emit("servicesUpdated", snapshot.val());
+        const service = {
+            ...req.body,
+            users: 0
+        };
 
-    res.json({ id: newRef.key, ...service });
+        await newRef.set(service);
+
+        // REALTIME UPDATE
+        const snapshot = await db.ref("services").once("value");
+
+        io.emit("servicesUpdated", snapshot.val());
+
+        res.json({
+            id: newRef.key,
+            ...service
+        });
+
+    } catch (err) {
+
+        console.error(err);
+
+        res.status(500).json({
+            error: "Failed to create service"
+        });
+
+    }
+
 });
 
-// UPDATE
+// UPDATE SERVICE
 app.put("/api/services/:id", async (req, res) => {
-    await db.ref("services/" + req.params.id).update(req.body);
 
-    const snapshot = await db.ref("services").once("value");
-    io.emit("servicesUpdated", snapshot.val());
+    try {
 
-    res.json({ success: true });
+        const id = req.params.id;
+
+        await db.ref("services/" + id).update(req.body);
+
+        // REALTIME UPDATE
+        const snapshot = await db.ref("services").once("value");
+
+        io.emit("servicesUpdated", snapshot.val());
+
+        res.json({
+            success: true
+        });
+
+    } catch (err) {
+
+        console.error(err);
+
+        res.status(500).json({
+            error: "Failed to update service"
+        });
+
+    }
+
 });
 
-// DELETE
+// DELETE SERVICE
 app.delete("/api/services/:id", async (req, res) => {
-    await db.ref("services/" + req.params.id).remove();
 
-    const snapshot = await db.ref("services").once("value");
-    io.emit("servicesUpdated", snapshot.val());
+    try {
 
-    res.json({ success: true });
+        const id = req.params.id;
+
+        await db.ref("services/" + id).remove();
+
+        // REALTIME UPDATE
+        const snapshot = await db.ref("services").once("value");
+
+        io.emit("servicesUpdated", snapshot.val());
+
+        res.json({
+            success: true
+        });
+
+    } catch (err) {
+
+        console.error(err);
+
+        res.status(500).json({
+            error: "Failed to delete service"
+        });
+
+    }
+
 });
 
 // ========================
 // SOCKET CONNECTION
 // ========================
 io.on("connection", (socket) => {
-    console.log("User connected:", socket.id);
+
+    console.log("🟢 User connected:", socket.id);
 
     socket.on("disconnect", () => {
-        console.log("User disconnected:", socket.id);
+
+        console.log("🔴 User disconnected:", socket.id);
+
     });
+
 });
 
 // ========================
-// SEND EMAIL API
-// ========================
-app.post("/api/send-email", async (req, res) => {
-    const { to, subject, message } = req.body;
-
-    if (!to || !subject || !message) {
-        return res.status(400).json({ error: "Missing fields" });
-    }
-
-    try {
-        await transporter.sendMail({
-            from: "Service Nest <servicenestofficial@gmail.com>",
-            to,
-            subject,
-            html: `<p>${message}</p>`
-        });
-
-        res.json({ success: true });
-    } catch (err) {
-        console.error("Email error:", err);
-        res.status(500).json({ error: "Email failed" });
-    }
-});
-
-// ========================
-// RAILWAY START
+// START SERVER
 // ========================
 const PORT = process.env.PORT || 3000;
 
 server.listen(PORT, () => {
-    console.log("🚀 Server running on port " + PORT);
+
+    console.log(`🚀 Server running on port ${PORT}`);
+
 });
