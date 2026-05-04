@@ -52,7 +52,7 @@ const transporter = nodemailer.createTransport({
 });
 
 // ========================
-// SAFETY: prevent duplicate listeners on Railway restarts
+// SUBSCRIBER WATCHER
 // ========================
 if (!global.subscriberListenerAdded) {
     db.ref("subscribers").on("child_added", async (snapshot) => {
@@ -98,7 +98,7 @@ app.get("/api/services", async (req, res) => {
 });
 
 // CREATE
-app.post("/services", async (req, res) => {
+app.post("/api/services", async (req, res) => {
     const newRef = db.ref("services").push();
 
     const service = {
@@ -171,7 +171,7 @@ app.post("/api/send-email", async (req, res) => {
 });
 
 // ========================
-// RAILWAY START FIX
+// RAILWAY START
 // ========================
 const PORT = process.env.PORT || 3000;
 
